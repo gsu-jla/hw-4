@@ -36,11 +36,92 @@ class AuthWrapper extends StatelessWidget {
         }
 
         if (snapshot.hasData) {
-          return ProfileScreen();
+          return HomeScreen();
         } else {
           return LoginScreen();
         }
       },
+    );
+  }
+}
+
+class HomeScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Home')),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(color: Colors.teal),
+              child: Text('Navigation', style: TextStyle(color: Colors.white, fontSize: 24)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen())),
+              child: Align(alignment: Alignment.centerLeft, child: Text('Profile')),
+            ),
+            Divider(),
+            TextButton(
+              onPressed: () {},
+              child: Align(alignment: Alignment.centerLeft, child: Text('Art')),
+            ),
+            TextButton(
+              onPressed: () {},
+              child: Align(alignment: Alignment.centerLeft, child: Text('Games')),
+            ),
+            Divider(),
+            TextButton(
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+              },
+              child: Align(alignment: Alignment.centerLeft, child: Text('Log Out')),
+            ),
+          ],
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            GestureDetector(
+              onTap: () {},
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Image.asset('assets/art.png', height: 150, width: double.infinity, fit: BoxFit.cover),
+                  Container(
+                    height: 150,
+                    width: double.infinity,
+                    color: Colors.black45,
+                    alignment: Alignment.center,
+                    child: Text('Art', style: TextStyle(fontSize: 24, color: Colors.white)),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 20),
+            GestureDetector(
+              onTap: () {},
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Image.asset('assets/games.png', height: 150, width: double.infinity, fit: BoxFit.cover),
+                  Container(
+                    height: 150,
+                    width: double.infinity,
+                    color: Colors.black45,
+                    alignment: Alignment.center,
+                    child: Text('Games', style: TextStyle(fontSize: 24, color: Colors.white)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -212,12 +293,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (data == null) return Center(child: Text("Profile not found."));
 
           final fields = [
-            {'label': 'Email', 'value': user!.email ?? '', 'field': 'email'},
-            {'label': 'Password', 'value': '••••••••', 'field': 'password'},
-            {'label': 'First Name', 'value': data['first_name'] ?? '', 'field': 'first_name'},
-            {'label': 'Last Name', 'value': data['last_name'] ?? '', 'field': 'last_name'},
-            {'label': 'User Role', 'value': data['user_role'] ?? '', 'field': ''},
-            {'label': 'Created At', 'value': (data['created_at'] as Timestamp).toDate().toString(), 'field': ''},
+            {'label': 'Email:', 'value': user!.email ?? '', 'field': 'email'},
+            {'label': 'Password:', 'value': '••••••••', 'field': 'password'},
+            {'label': 'First Name:', 'value': data['first_name'] ?? '', 'field': 'first_name'},
+            {'label': 'Last Name:', 'value': data['last_name'] ?? '', 'field': 'last_name'},
+            {'label': 'User Role:', 'value': data['user_role'] ?? '', 'field': ''},
+            {'label': 'Join Date:', 'value': (data['created_at'] as Timestamp).toDate().toString(), 'field': ''},
           ];
 
           return ListView(
