@@ -49,7 +49,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Home')),
+      appBar: AppBar(title: Text('Message Boards')),
       drawer: AppDrawer(), // <--- updated to use shared drawer
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -65,9 +65,8 @@ class HomeScreen extends StatelessWidget {
                   Container(
                     height: 150,
                     width: double.infinity,
-                    color: Colors.black45,
+                    color: const Color.fromARGB(115, 231, 231, 231),
                     alignment: Alignment.center,
-                    child: Text('Art', style: TextStyle(fontSize: 24, color: Colors.white)),
                   ),
                 ],
               ),
@@ -82,9 +81,8 @@ class HomeScreen extends StatelessWidget {
                   Container(
                     height: 150,
                     width: double.infinity,
-                    color: Colors.black45,
+                    color: const Color.fromARGB(115, 231, 231, 231),
                     alignment: Alignment.center,
-                    child: Text('Games', style: TextStyle(fontSize: 24, color: Colors.white)),
                   ),
                 ],
               ),
@@ -294,70 +292,126 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
 // Art Screen with Drawer
 class ArtScreen extends StatelessWidget {
+  final user = FirebaseAuth.instance.currentUser;
+
+  void _showPostDialog(BuildContext context) {
+    final titleController = TextEditingController();
+    final messageController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('New Art Post'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: titleController, decoration: InputDecoration(labelText: 'Title')),
+            TextField(controller: messageController, decoration: InputDecoration(labelText: 'Message')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancel")),
+          ElevatedButton(
+            onPressed: () async {
+              final profileSnap = await FirebaseFirestore.instance.collection('profiles').doc(user!.uid).get();
+              final profile = profileSnap.data();
+
+              await FirebaseFirestore.instance.collection('msg-art').add({
+                'title': titleController.text.trim(),
+                'message_content': messageController.text.trim(),
+                'user_id': user!.uid,
+                'first_name': profile?['first_name'] ?? '',
+                'last_name': profile?['last_name'] ?? '',
+                'created_at': Timestamp.now(),
+              });
+
+              Navigator.pop(context);
+            },
+            child: Text("Post"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Art Message Board')),
-      drawer: AppDrawer(), // <--- use shared drawer here
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('msg-art')
-            .orderBy('created_at', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: Text('No art messages found.'));
-          }
-
-          final messages = snapshot.data!.docs;
-
-          return ListView.builder(
+      drawer: AppDrawer(),
+      body: Column(
+        children: [
+          Padding(
             padding: const EdgeInsets.all(16),
-            itemCount: messages.length,
-            itemBuilder: (context, index) {
-              final data = messages[index].data() as Map<String, dynamic>;
+            child: ElevatedButton(
+              onPressed: () => _showPostDialog(context),
+              child: Text("Write here"),
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('msg-art')
+                  .orderBy('created_at', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
 
-              final title = data['title'] ?? '';
-              final firstName = data['first_name'] ?? '';
-              final lastName = data['last_name'] ?? '';
-              final userId = data['user_id'] ?? '';
-              final content = data['message_content'] ?? '';
-              final timestamp = data['created_at'] as Timestamp?;
-              final date = timestamp?.toDate().toString() ?? '';
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(child: Text('No art messages found.'));
+                }
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.teal.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.teal.shade100),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.titleLarge),
-                    SizedBox(height: 4),
-                    Text('$firstName $lastName', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                    Text(userId, style: TextStyle(fontSize: 10, color: Colors.grey)),
-                    Divider(),
-                    Text(content, style: TextStyle(fontSize: 16)),
-                    Divider(),
-                    Text(date, style: TextStyle(fontSize: 12, color: Colors.grey)),
-                  ],
-                ),
-              );
-            },
-          );
-        },
+                final messages = snapshot.data!.docs;
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final data = messages[index].data() as Map<String, dynamic>;
+
+                    final title = data['title'] ?? '';
+                    final firstName = data['first_name'] ?? '';
+                    final lastName = data['last_name'] ?? '';
+                    final userId = data['user_id'] ?? '';
+                    final content = data['message_content'] ?? '';
+                    final timestamp = data['created_at'] as Timestamp?;
+                    final date = timestamp?.toDate().toString() ?? '';
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.teal.shade100),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(title, style: Theme.of(context).textTheme.titleLarge),
+                          SizedBox(height: 4),
+                          Text('Name: $firstName $lastName', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                          Text('UID: $userId', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                          Divider(),
+                          Text(content, style: TextStyle(fontSize: 16)),
+                          Divider(),
+                          Text('Posted: $date', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 }
+
 
 // Shared Drawer Widget
 class AppDrawer extends StatelessWidget {
@@ -401,66 +455,121 @@ class AppDrawer extends StatelessWidget {
 
 // Games Screen with Drawer
 class GamesScreen extends StatelessWidget {
+  final user = FirebaseAuth.instance.currentUser;
+
+  void _showPostDialog(BuildContext context) {
+    final titleController = TextEditingController();
+    final messageController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('New Games Post'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: titleController, decoration: InputDecoration(labelText: 'Title')),
+            TextField(controller: messageController, decoration: InputDecoration(labelText: 'Message')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancel")),
+          ElevatedButton(
+            onPressed: () async {
+              final profileSnap = await FirebaseFirestore.instance.collection('profiles').doc(user!.uid).get();
+              final profile = profileSnap.data();
+
+              await FirebaseFirestore.instance.collection('msg-games').add({
+                'title': titleController.text.trim(),
+                'message_content': messageController.text.trim(),
+                'user_id': user!.uid,
+                'first_name': profile?['first_name'] ?? '',
+                'last_name': profile?['last_name'] ?? '',
+                'created_at': Timestamp.now(),
+              });
+
+              Navigator.pop(context);
+            },
+            child: Text("Post"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Games Message Board')),
-      drawer: AppDrawer(), // <--- use shared drawer here
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('msg-games')
-            .orderBy('created_at', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: Text('No games messages found.'));
-          }
-
-          final messages = snapshot.data!.docs;
-
-          return ListView.builder(
+      drawer: AppDrawer(),
+      body: Column(
+        children: [
+          Padding(
             padding: const EdgeInsets.all(16),
-            itemCount: messages.length,
-            itemBuilder: (context, index) {
-              final data = messages[index].data() as Map<String, dynamic>;
+            child: ElevatedButton(
+              onPressed: () => _showPostDialog(context),
+              child: Text("Write here"),
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('msg-games')
+                  .orderBy('created_at', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
 
-              final title = data['title'] ?? '';
-              final firstName = data['first_name'] ?? '';
-              final lastName = data['last_name'] ?? '';
-              final userId = data['user_id'] ?? '';
-              final content = data['message_content'] ?? '';
-              final timestamp = data['created_at'] as Timestamp?;
-              final date = timestamp?.toDate().toString() ?? '';
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(child: Text('No games messages found.'));
+                }
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.teal.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.teal.shade100),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.titleLarge),
-                    SizedBox(height: 4),
-                    Text('$firstName $lastName', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                    Text(userId, style: TextStyle(fontSize: 10, color: Colors.grey)),
-                    Divider(),
-                    Text(content, style: TextStyle(fontSize: 16)),
-                    Divider(),
-                    Text(date, style: TextStyle(fontSize: 12, color: Colors.grey)),
-                  ],
-                ),
-              );
-            },
-          );
-        },
+                final messages = snapshot.data!.docs;
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final data = messages[index].data() as Map<String, dynamic>;
+
+                    final title = data['title'] ?? '';
+                    final firstName = data['first_name'] ?? '';
+                    final lastName = data['last_name'] ?? '';
+                    final userId = data['user_id'] ?? '';
+                    final content = data['message_content'] ?? '';
+                    final timestamp = data['created_at'] as Timestamp?;
+                    final date = timestamp?.toDate().toString() ?? '';
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.teal.shade100),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(title, style: Theme.of(context).textTheme.titleLarge),
+                          SizedBox(height: 4),
+                          Text('Name: $firstName $lastName', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                          Text('UID: $userId', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                          Divider(),
+                          Text(content, style: TextStyle(fontSize: 16)),
+                          Divider(),
+                          Text('Posted: $date', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
