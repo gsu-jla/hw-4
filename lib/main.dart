@@ -32,7 +32,7 @@ class AuthWrapper extends StatelessWidget {
         }
 
         if (snapshot.hasError) {
-          return Scaffold(body: Center(child: Text("Error: \${snapshot.error}")));
+          return Scaffold(body: Center(child: Text("Error: ${snapshot.error}")));
         }
 
         if (snapshot.hasData) {
@@ -50,44 +50,14 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Home')),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(color: Colors.teal),
-              child: Text('Navigation', style: TextStyle(color: Colors.white, fontSize: 24)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen())),
-              child: Align(alignment: Alignment.centerLeft, child: Text('Profile')),
-            ),
-            Divider(),
-            TextButton(
-              onPressed: () {},
-              child: Align(alignment: Alignment.centerLeft, child: Text('Art')),
-            ),
-            TextButton(
-              onPressed: () {},
-              child: Align(alignment: Alignment.centerLeft, child: Text('Games')),
-            ),
-            Divider(),
-            TextButton(
-              onPressed: () async {
-                await FirebaseAuth.instance.signOut();
-              },
-              child: Align(alignment: Alignment.centerLeft, child: Text('Log Out')),
-            ),
-          ],
-        ),
-      ),
+      drawer: AppDrawer(), // <--- updated to use shared drawer
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             GestureDetector(
-              onTap: () {},
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ArtScreen())),
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -104,7 +74,7 @@ class HomeScreen extends StatelessWidget {
             ),
             SizedBox(height: 20),
             GestureDetector(
-              onTap: () {},
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GamesScreen())),
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -315,6 +285,180 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     : null,
               );
             }).toList(),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// Art Screen with Drawer
+class ArtScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Art Message Board')),
+      drawer: AppDrawer(), // <--- use shared drawer here
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('msg-art')
+            .orderBy('created_at', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(child: Text('No art messages found.'));
+          }
+
+          final messages = snapshot.data!.docs;
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: messages.length,
+            itemBuilder: (context, index) {
+              final data = messages[index].data() as Map<String, dynamic>;
+
+              final title = data['title'] ?? '';
+              final firstName = data['first_name'] ?? '';
+              final lastName = data['last_name'] ?? '';
+              final userId = data['user_id'] ?? '';
+              final content = data['message_content'] ?? '';
+              final timestamp = data['created_at'] as Timestamp?;
+              final date = timestamp?.toDate().toString() ?? '';
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.teal.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.teal.shade100),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: Theme.of(context).textTheme.titleLarge),
+                    SizedBox(height: 4),
+                    Text('$firstName $lastName', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                    Text(userId, style: TextStyle(fontSize: 10, color: Colors.grey)),
+                    Divider(),
+                    Text(content, style: TextStyle(fontSize: 16)),
+                    Divider(),
+                    Text(date, style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+// Shared Drawer Widget
+class AppDrawer extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(color: Colors.teal),
+            child: Text('Navigation', style: TextStyle(color: Colors.white, fontSize: 24)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen())),
+            child: Align(alignment: Alignment.centerLeft, child: Text('Profile')),
+          ),
+          Divider(),
+          TextButton(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ArtScreen())),
+            child: Align(alignment: Alignment.centerLeft, child: Text('Art')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GamesScreen())),
+            child: Align(alignment: Alignment.centerLeft, child: Text('Games')),
+          ),
+          Divider(),
+          TextButton(
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
+            child: Align(alignment: Alignment.centerLeft, child: Text('Log Out')),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+// Games Screen with Drawer
+class GamesScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Games Message Board')),
+      drawer: AppDrawer(), // <--- use shared drawer here
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('msg-games')
+            .orderBy('created_at', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(child: Text('No games messages found.'));
+          }
+
+          final messages = snapshot.data!.docs;
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: messages.length,
+            itemBuilder: (context, index) {
+              final data = messages[index].data() as Map<String, dynamic>;
+
+              final title = data['title'] ?? '';
+              final firstName = data['first_name'] ?? '';
+              final lastName = data['last_name'] ?? '';
+              final userId = data['user_id'] ?? '';
+              final content = data['message_content'] ?? '';
+              final timestamp = data['created_at'] as Timestamp?;
+              final date = timestamp?.toDate().toString() ?? '';
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.teal.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.teal.shade100),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: Theme.of(context).textTheme.titleLarge),
+                    SizedBox(height: 4),
+                    Text('$firstName $lastName', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                    Text(userId, style: TextStyle(fontSize: 10, color: Colors.grey)),
+                    Divider(),
+                    Text(content, style: TextStyle(fontSize: 16)),
+                    Divider(),
+                    Text(date, style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  ],
+                ),
+              );
+            },
           );
         },
       ),
